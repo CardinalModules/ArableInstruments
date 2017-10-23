@@ -2,6 +2,7 @@
 #include "AudibleInstruments.hpp"
 #include "dsp/samplerate.hpp"
 #include "dsp/ringbuffer.hpp"
+#include "dsp/digital.hpp"
 #include "clouds/dsp/granular_processor.h"
 
 
@@ -14,6 +15,10 @@ struct Clouds : Module {
 		DENSITY_PARAM,
 		TEXTURE_PARAM,
 		BLEND_PARAM,
+    SPREAD_PARAM,
+    FEEDBACK_PARAM,
+    REVERB_PARAM,
+    FREEZE_PARAM,
 		NUM_PARAMS
 	};
 	enum InputIds {
@@ -23,6 +28,9 @@ struct Clouds : Module {
 		SIZE_INPUT,
 		PITCH_INPUT,
 		BLEND_INPUT,
+    SPREAD_INPUT,
+    FEEDBACK_INPUT,
+    REVERB_INPUT,
 		IN_L_INPUT,
 		IN_R_INPUT,
 		DENSITY_INPUT,
@@ -40,26 +48,31 @@ struct Clouds : Module {
 	DoubleRingBuffer<Frame<2>, 256> inputBuffer;
 	DoubleRingBuffer<Frame<2>, 256> outputBuffer;
 
+  clouds::PlaybackMode playbackmode =  clouds::PLAYBACK_MODE_GRANULAR;
 	uint8_t *block_mem;
 	uint8_t *block_ccm;
 	clouds::GranularProcessor *processor;
 
 	bool triggered = false;
+  float freezeLight = 0.0;
+  bool freeze = false;
+  SchmittTrigger freezeTrigger;
 
 	Clouds();
 	~Clouds();
-	void step() override;
+	void step();
 };
 
 
 Clouds::Clouds() : Module(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS) {
-	const int memLen = 118784;
+	const int memLen = 118784*8;
 	const int ccmLen = 65536 - 128;
 	block_mem = new uint8_t[memLen]();
 	block_ccm = new uint8_t[ccmLen]();
 	processor = new clouds::GranularProcessor();
 	memset(processor, 0, sizeof(*processor));
 
+  freezeTrigger.setThresholds(0.0, 1.0);
 	processor->Init(block_mem, memLen, block_ccm, ccmLen);
 }
 
@@ -88,7 +101,7 @@ void Clouds::step() {
 		clouds::ShortFrame input[32] = {};
 		// Convert input buffer
 		{
-			inputSrc.setRatio(32000.0 / engineGetSampleRate());
+			inputSrc.setRatio(32000.0 / gSampleRate);
 			Frame<2> inputFrames[32];
 			int inLen = inputBuffer.size();
 			int outLen = 32;
@@ -109,10 +122,14 @@ void Clouds::step() {
 		processor->set_playback_mode(clouds::PLAYBACK_MODE_GRANULAR);
 		processor->Prepare();
 
+    
+    if (freezeTrigger.process(params[FREEZE_PARAM].value)) {
+		   freeze = !freeze;
+	  } 
 		clouds::Parameters* p = processor->mutable_parameters();
 		p->trigger = triggered;
 		p->gate = triggered;
-		p->freeze = (inputs[FREEZE_INPUT].value >= 1.0);
+		p->freeze = (inputs[FREEZE_INPUT].value >= 1.0 || freeze);
 		p->position = clampf(params[POSITION_PARAM].value + inputs[POSITION_INPUT].value / 5.0, 0.0, 1.0);
 		p->size = clampf(params[SIZE_PARAM].value + inputs[SIZE_INPUT].value / 5.0, 0.0, 1.0);
 		p->pitch = clampf((params[PITCH_PARAM].value + inputs[PITCH_INPUT].value) * 12.0, -48.0, 48.0);
@@ -120,12 +137,14 @@ void Clouds::step() {
 		p->texture = clampf(params[TEXTURE_PARAM].value + inputs[TEXTURE_INPUT].value / 5.0, 0.0, 1.0);
 		float blend = clampf(params[BLEND_PARAM].value + inputs[BLEND_INPUT].value / 5.0, 0.0, 1.0);
 		p->dry_wet = blend;
-		p->stereo_spread = 0.0;
-		p->feedback = 0.0;
-		p->reverb = 0.0;
+		p->stereo_spread =  clampf(params[SPREAD_PARAM].value + inputs[SPREAD_INPUT].value / 5.0, 0.0, 1.0);;
+		p->feedback =  clampf(params[FEEDBACK_PARAM].value + inputs[FEEDBACK_INPUT].value / 5.0, 0.0, 1.0);;
+		p->reverb =  clampf(params[REVERB_PARAM].value + inputs[REVERB_INPUT].value / 5.0, 0.0, 1.0);;
 
 		clouds::ShortFrame output[32];
 		processor->Process(input, output, 32);
+    
+    freezeLight = p->freeze ? 1.0 : 0.0;
 
 		// Convert output buffer
 		{
@@ -135,7 +154,7 @@ void Clouds::step() {
 				outputFrames[i].samples[1] = output[i].r / 32768.0;
 			}
 
-			outputSrc.setRatio(engineGetSampleRate() / 32000.0);
+			outputSrc.setRatio(gSampleRate / 32000.0);
 			int inLen = 32;
 			int outLen = outputBuffer.capacity();
 			outputSrc.process(outputFrames, &inLen, outputBuffer.endData(), &outLen);
@@ -157,11 +176,11 @@ void Clouds::step() {
 CloudsWidget::CloudsWidget() {
 	Clouds *module = new Clouds();
 	setModule(module);
-	box.size = Vec(15*18, 380);
+	box.size = Vec(15*18+67*3, 380);
 
 	{
 		Panel *panel = new LightPanel();
-		panel->backgroundImage = Image::load(assetPlugin(plugin, "res/Clouds.png"));
+		panel->backgroundImage = Image::load(assetPlugin(plugin, "res/Joni.png"));
 		panel->box.size = box.size;
 		addChild(panel);
 	}
@@ -183,18 +202,97 @@ CloudsWidget::CloudsWidget() {
 	addParam(createParam<Rogan1PSRed>(Vec(82, 181), module, Clouds::DENSITY_PARAM, 0.0, 1.0, 0.5));
 	addParam(createParam<Rogan1PSGreen>(Vec(147, 181), module, Clouds::TEXTURE_PARAM, 0.0, 1.0, 0.5));
 	addParam(createParam<Rogan1PSWhite>(Vec(214, 181), module, Clouds::BLEND_PARAM, 0.0, 1.0, 0.5));
+  
+  
+  addParam(createParam<Rogan1PSRed>(Vec(214+67, 181), module, Clouds::SPREAD_PARAM, 0.0, 1.0, 0.5));
+	addParam(createParam<Rogan1PSGreen>(Vec(214+67+67, 181), module, Clouds::FEEDBACK_PARAM, 0.0, 1.0, 0.5));
+	addParam(createParam<Rogan1PSWhite>(Vec(214+67+67+67, 181), module, Clouds::REVERB_PARAM, 0.0, 1.0, 0.5));
 
-	addInput(createInput<PJ301MPort>(Vec(15, 274), module, Clouds::FREEZE_INPUT));
-	addInput(createInput<PJ301MPort>(Vec(58, 274), module, Clouds::TRIG_INPUT));
-	addInput(createInput<PJ301MPort>(Vec(101, 274), module, Clouds::POSITION_INPUT));
-	addInput(createInput<PJ301MPort>(Vec(144, 274), module, Clouds::SIZE_INPUT));
-	addInput(createInput<PJ301MPort>(Vec(188, 274), module, Clouds::PITCH_INPUT));
-	addInput(createInput<PJ301MPort>(Vec(230, 274), module, Clouds::BLEND_INPUT));
 
-	addInput(createInput<PJ301MPort>(Vec(15, 317), module, Clouds::IN_L_INPUT));
-	addInput(createInput<PJ301MPort>(Vec(58, 317), module, Clouds::IN_R_INPUT));
-	addInput(createInput<PJ301MPort>(Vec(101, 317), module, Clouds::DENSITY_INPUT));
-	addInput(createInput<PJ301MPort>(Vec(144, 317), module, Clouds::TEXTURE_INPUT));
-	addOutput(createOutput<PJ301MPort>(Vec(188, 317), module, Clouds::OUT_L_OUTPUT));
-	addOutput(createOutput<PJ301MPort>(Vec(230, 317), module, Clouds::OUT_R_OUTPUT));
+	addInput(createInput<PJ3410Port>(Vec(11, 270), module, Clouds::FREEZE_INPUT));
+	addInput(createInput<PJ3410Port>(Vec(54, 270), module, Clouds::TRIG_INPUT));
+	addInput(createInput<PJ3410Port>(Vec(97, 270), module, Clouds::POSITION_INPUT));
+	addInput(createInput<PJ3410Port>(Vec(140, 270), module, Clouds::SIZE_INPUT));
+	addInput(createInput<PJ3410Port>(Vec(184, 270), module, Clouds::PITCH_INPUT));
+	addInput(createInput<PJ3410Port>(Vec(227, 270), module, Clouds::BLEND_INPUT));
+
+	addInput(createInput<PJ3410Port>(Vec(11, 313), module, Clouds::IN_L_INPUT));
+	addInput(createInput<PJ3410Port>(Vec(54, 313), module, Clouds::IN_R_INPUT));
+	addInput(createInput<PJ3410Port>(Vec(97, 313), module, Clouds::DENSITY_INPUT));
+	addInput(createInput<PJ3410Port>(Vec(140, 313), module, Clouds::TEXTURE_INPUT));
+	addOutput(createOutput<PJ3410Port>(Vec(184, 313), module, Clouds::OUT_L_OUTPUT));
+	addOutput(createOutput<PJ3410Port>(Vec(227, 313), module, Clouds::OUT_R_OUTPUT));
+  
+  
+  addInput(createInput<PJ3410Port>(Vec(214+67, 291), module, Clouds::SPREAD_INPUT));
+	addInput(createInput<PJ3410Port>(Vec(214+67*2, 291), module, Clouds::FEEDBACK_INPUT));
+	addInput(createInput<PJ3410Port>(Vec(214+67*3, 291), module, Clouds::REVERB_INPUT));
+  
+  addParam(createParam<LEDButton>(Vec(98, 61-1), module, Clouds::FREEZE_PARAM, 0.0, 1.0, 0.0));
+	addChild(createValueLight<SmallLight<GreenValueLight>>(Vec(98+5, 61+4), &module->freezeLight));
+  
+  
 }
+
+
+NeilWidget::NeilWidget() {
+	Clouds *module = new Clouds();
+  module->playbackmode = clouds::PLAYBACK_MODE_SPECTRAL;
+	setModule(module);
+	box.size = Vec(15*18+67*3, 380);
+
+	{
+		Panel *panel = new LightPanel();
+		panel->backgroundImage = Image::load(assetPlugin(plugin, "res/Neil.png"));
+		panel->box.size = box.size;
+		addChild(panel);
+	}
+
+	addChild(createScrew<ScrewSilver>(Vec(15, 0)));
+	addChild(createScrew<ScrewSilver>(Vec(240, 0)));
+	addChild(createScrew<ScrewSilver>(Vec(15, 365)));
+	addChild(createScrew<ScrewSilver>(Vec(240, 365)));
+
+	// TODO
+	// addParam(createParam<MediumMomentarySwitch>(Vec(211, 51), module, Clouds::POSITION_PARAM, 0.0, 1.0, 0.5));
+	// addParam(createParam<MediumMomentarySwitch>(Vec(239, 51), module, Clouds::POSITION_PARAM, 0.0, 1.0, 0.5));
+
+	addParam(createParam<Rogan3PSRed>(Vec(28, 94), module, Clouds::POSITION_PARAM, 0.0, 1.0, 0.5));
+	addParam(createParam<Rogan3PSGreen>(Vec(109, 94), module, Clouds::SIZE_PARAM, 0.0, 1.0, 0.5));
+	addParam(createParam<Rogan3PSWhite>(Vec(191, 94), module, Clouds::PITCH_PARAM, -2.0, 2.0, 0.0));
+
+	addParam(createParam<Rogan1PSRed>(Vec(15, 181), module, Clouds::IN_GAIN_PARAM, 0.0, 1.0, 0.5));
+	addParam(createParam<Rogan1PSRed>(Vec(82, 181), module, Clouds::DENSITY_PARAM, 0.0, 1.0, 0.5));
+	addParam(createParam<Rogan1PSGreen>(Vec(147, 181), module, Clouds::TEXTURE_PARAM, 0.0, 1.0, 0.5));
+	addParam(createParam<Rogan1PSWhite>(Vec(214, 181), module, Clouds::BLEND_PARAM, 0.0, 1.0, 0.5));
+  
+  
+  addParam(createParam<Rogan1PSRed>(Vec(214+67, 181), module, Clouds::SPREAD_PARAM, 0.0, 1.0, 0.5));
+	addParam(createParam<Rogan1PSGreen>(Vec(214+67+67, 181), module, Clouds::FEEDBACK_PARAM, 0.0, 1.0, 0.5));
+	addParam(createParam<Rogan1PSWhite>(Vec(214+67+67+67, 181), module, Clouds::REVERB_PARAM, 0.0, 1.0, 0.5));
+
+
+	addInput(createInput<PJ3410Port>(Vec(11, 270), module, Clouds::FREEZE_INPUT));
+	addInput(createInput<PJ3410Port>(Vec(54, 270), module, Clouds::TRIG_INPUT));
+	addInput(createInput<PJ3410Port>(Vec(97, 270), module, Clouds::POSITION_INPUT));
+	addInput(createInput<PJ3410Port>(Vec(140, 270), module, Clouds::SIZE_INPUT));
+	addInput(createInput<PJ3410Port>(Vec(184, 270), module, Clouds::PITCH_INPUT));
+	addInput(createInput<PJ3410Port>(Vec(227, 270), module, Clouds::BLEND_INPUT));
+
+	addInput(createInput<PJ3410Port>(Vec(11, 313), module, Clouds::IN_L_INPUT));
+	addInput(createInput<PJ3410Port>(Vec(54, 313), module, Clouds::IN_R_INPUT));
+	addInput(createInput<PJ3410Port>(Vec(97, 313), module, Clouds::DENSITY_INPUT));
+	addInput(createInput<PJ3410Port>(Vec(140, 313), module, Clouds::TEXTURE_INPUT));
+	addOutput(createOutput<PJ3410Port>(Vec(184, 313), module, Clouds::OUT_L_OUTPUT));
+	addOutput(createOutput<PJ3410Port>(Vec(227, 313), module, Clouds::OUT_R_OUTPUT));
+  
+  
+  addInput(createInput<PJ3410Port>(Vec(214+67, 291), module, Clouds::SPREAD_INPUT));
+	addInput(createInput<PJ3410Port>(Vec(214+67*2, 291), module, Clouds::FEEDBACK_INPUT));
+	addInput(createInput<PJ3410Port>(Vec(214+67*3, 291), module, Clouds::REVERB_INPUT));
+
+  addParam(createParam<LEDButton>(Vec(98, 61-1), module, Clouds::FREEZE_PARAM, 0.0, 1.0, 0.0));
+	addChild(createValueLight<SmallLight<GreenValueLight>>(Vec(98+5, 61+4), &module->freezeLight));
+  
+}
+
