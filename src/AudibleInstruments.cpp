@@ -10,6 +10,4 @@ void init(rack::Plugin *p) {
 	plugin->homepageUrl = "https://github.com/VCVRack/AudibleInstruments";
 
 	createModel<CloudsWidget>(plugin, "Joni", "Joni - Texture Synthesizer");
-  createModel<NeilWidget>(plugin, "Neil", "Neil - Spectral Synthesizer");
-
 }

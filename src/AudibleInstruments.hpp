@@ -34,6 +34,7 @@ struct StreamsWidget : ModuleWidget {
 
 struct CloudsWidget : ModuleWidget {
 	CloudsWidget();
+  Menu *createContextMenu() override;
 };
 
 struct NeilWidget : ModuleWidget {
