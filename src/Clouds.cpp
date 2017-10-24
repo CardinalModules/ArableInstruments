@@ -64,6 +64,32 @@ struct Clouds : Module {
   Clouds();
   ~Clouds();
   void step();
+  
+  
+	json_t *toJson() override {
+		json_t *rootJ = json_object();
+    //playbackmode, lofi, mono
+		json_object_set_new(rootJ, "playbackmode", json_integer(playbackmode));
+    json_object_set_new(rootJ, "lofi", json_integer(lofi));
+    json_object_set_new(rootJ, "mono", json_integer(mono));
+		return rootJ;
+	}
+
+	void fromJson(json_t *rootJ) override {
+		json_t *playbackmodeJ = json_object_get(rootJ, "playbackmode");
+		if (playbackmodeJ) {
+			playbackmode = (clouds::PlaybackMode)json_integer_value(playbackmodeJ);
+		}
+    json_t *lofiJ = json_object_get(rootJ, "lofi");
+		if (lofiJ) {
+			lofi = json_integer_value(lofiJ);
+		}
+    json_t *monoJ = json_object_get(rootJ, "mono");
+		if (monoJ) {
+			mono = json_integer_value(monoJ);
+		}
+	}
+  
 };
 
 
@@ -236,70 +262,70 @@ CloudsWidget::CloudsWidget() {
 }
 
 struct CloudsModeItem : MenuItem {
-	Clouds *clouds;
-	clouds::PlaybackMode mode;
+  Clouds *clouds;
+  clouds::PlaybackMode mode;
 
-	void onAction() override {
+  void onAction() override {
     clouds->playbackmode = mode;
-	}
-	void step() override {
-		rightText = (clouds->playbackmode == mode) ? "✔" : "";
-	}
+  }
+  void step() override {
+    rightText = (clouds->playbackmode == mode) ? "✔" : "";
+  }
 };
 
 
 struct CloudsMonoItem : MenuItem {
-	Clouds *clouds;
-	bool setting;
+  Clouds *clouds;
+  bool setting;
 
-	void onAction() override {
+  void onAction() override {
     clouds->mono = setting;
-	}
-	void step() override {
-		rightText = (clouds->mono == setting) ? "✔" : "";
-	}
+  }
+  void step() override {
+    rightText = (clouds->mono == setting) ? "✔" : "";
+  }
 };
 
 
 struct CloudsLofiItem : MenuItem {
-	Clouds *clouds;
-	bool setting;
+  Clouds *clouds;
+  bool setting;
 
-	void onAction() override {
+  void onAction() override {
     clouds->lofi = setting;
-	}
-	void step() override {
-		rightText = (clouds->lofi == setting) ? "✔" : "";
-	}
+  }
+  void step() override {
+    rightText = (clouds->lofi == setting) ? "✔" : "";
+  }
 };
 
 Menu *CloudsWidget::createContextMenu() {
-	Menu *menu = ModuleWidget::createContextMenu();
+  Menu *menu = ModuleWidget::createContextMenu();
 
-	Clouds *clouds = dynamic_cast<Clouds*>(module);
-	assert(clouds);
+  Clouds *clouds = dynamic_cast<Clouds*>(module);
+  assert(clouds);
 
 
   menu->pushChild(construct<MenuLabel>());
-	menu->pushChild(construct<MenuLabel>(&MenuEntry::text, "Alternative Modes"));
-	menu->pushChild(construct<CloudsModeItem>(&MenuEntry::text, "PLAYBACK_MODE_GRANULAR", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_GRANULAR));
-	menu->pushChild(construct<CloudsModeItem>(&MenuEntry::text, "PLAYBACK_MODE_SPECTRAL", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_SPECTRAL));
-	menu->pushChild(construct<CloudsModeItem>(&MenuEntry::text, "PLAYBACK_MODE_LOOPING_DELAY", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_LOOPING_DELAY));
+  menu->pushChild(construct<MenuLabel>(&MenuEntry::text, "Alternative Modes"));
+  menu->pushChild(construct<CloudsModeItem>(&MenuEntry::text, "PLAYBACK_MODE_GRANULAR", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_GRANULAR));
+  menu->pushChild(construct<CloudsModeItem>(&MenuEntry::text, "PLAYBACK_MODE_SPECTRAL", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_SPECTRAL));
+  menu->pushChild(construct<CloudsModeItem>(&MenuEntry::text, "PLAYBACK_MODE_LOOPING_DELAY", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_LOOPING_DELAY));
   menu->pushChild(construct<CloudsModeItem>(&MenuEntry::text, "PLAYBACK_MODE_STRETCH", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_STRETCH));
   
   menu->pushChild(construct<MenuLabel>(&MenuEntry::text, "STEREO/MONO"));
-	menu->pushChild(construct<CloudsMonoItem>(&MenuEntry::text, "STEREO", &CloudsMonoItem::clouds, clouds, &CloudsMonoItem::setting, false));
-	menu->pushChild(construct<CloudsMonoItem>(&MenuEntry::text, "MONO", &CloudsMonoItem::clouds, clouds, &CloudsMonoItem::setting, true));  
+  menu->pushChild(construct<CloudsMonoItem>(&MenuEntry::text, "STEREO", &CloudsMonoItem::clouds, clouds, &CloudsMonoItem::setting, false));
+  menu->pushChild(construct<CloudsMonoItem>(&MenuEntry::text, "MONO", &CloudsMonoItem::clouds, clouds, &CloudsMonoItem::setting, true));  
   
   menu->pushChild(construct<MenuLabel>(&MenuEntry::text, "HIFI/LOFI"));
   menu->pushChild(construct<CloudsLofiItem>(&MenuEntry::text, "HIFI", &CloudsLofiItem::clouds, clouds, &CloudsLofiItem::setting, false));
-	menu->pushChild(construct<CloudsLofiItem>(&MenuEntry::text, "LOFI", &CloudsLofiItem::clouds, clouds, &CloudsLofiItem::setting, true));  
+  menu->pushChild(construct<CloudsLofiItem>(&MenuEntry::text, "LOFI", &CloudsLofiItem::clouds, clouds, &CloudsLofiItem::setting, true));  
   
   
   
   
   
-	return menu;
+  return menu;
 }
 
 
