@@ -72,6 +72,7 @@ struct Clouds : Module {
 		json_object_set_new(rootJ, "playbackmode", json_integer(playbackmode));
     json_object_set_new(rootJ, "lofi", json_integer(lofi));
     json_object_set_new(rootJ, "mono", json_integer(mono));
+    json_object_set_new(rootJ, "freeze", json_integer(freeze));
 		return rootJ;
 	}
 
@@ -88,6 +89,11 @@ struct Clouds : Module {
 		if (monoJ) {
 			mono = json_integer_value(monoJ);
 		}
+    json_t *freezeJ = json_object_get(rootJ, "freeze");
+		if (freezeJ) {
+			freeze = json_integer_value(freezeJ);
+		}    
+    
 	}
   
 };
