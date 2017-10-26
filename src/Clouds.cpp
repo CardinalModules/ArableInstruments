@@ -313,11 +313,11 @@ Menu *CloudsWidget::createContextMenu() {
 
 
   menu->pushChild(construct<MenuLabel>());
-  menu->pushChild(construct<MenuLabel>(&MenuEntry::text, "Alternative Modes"));
-  menu->pushChild(construct<CloudsModeItem>(&MenuEntry::text, "PLAYBACK_MODE_GRANULAR", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_GRANULAR));
-  menu->pushChild(construct<CloudsModeItem>(&MenuEntry::text, "PLAYBACK_MODE_SPECTRAL", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_SPECTRAL));
-  menu->pushChild(construct<CloudsModeItem>(&MenuEntry::text, "PLAYBACK_MODE_LOOPING_DELAY", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_LOOPING_DELAY));
-  menu->pushChild(construct<CloudsModeItem>(&MenuEntry::text, "PLAYBACK_MODE_STRETCH", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_STRETCH));
+  menu->pushChild(construct<MenuLabel>(&MenuEntry::text, "MODE"));
+  menu->pushChild(construct<CloudsModeItem>(&MenuEntry::text, "GRANULAR", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_GRANULAR));
+  menu->pushChild(construct<CloudsModeItem>(&MenuEntry::text, "SPECTRAL", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_SPECTRAL));
+  menu->pushChild(construct<CloudsModeItem>(&MenuEntry::text, "LOOPING_DELAY", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_LOOPING_DELAY));
+  menu->pushChild(construct<CloudsModeItem>(&MenuEntry::text, "STRETCH", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_STRETCH));
   
   menu->pushChild(construct<MenuLabel>(&MenuEntry::text, "STEREO/MONO"));
   menu->pushChild(construct<CloudsMonoItem>(&MenuEntry::text, "STEREO", &CloudsMonoItem::clouds, clouds, &CloudsMonoItem::setting, false));
