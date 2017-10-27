@@ -51,8 +51,8 @@ include ../../plugin.mk
 
 
 dist: all
-	mkdir -p dist/AudibleInstruments
-	cp LICENSE* dist/AudibleInstruments/
-	cp plugin.* dist/AudibleInstruments/
-	cp -R res dist/AudibleInstruments/
-	cd dist && zip -5 -r AudibleInstruments-$(VERSION)-$(ARCH).zip AudibleInstruments
+	mkdir -p dist/ArableInstruments
+	cp LICENSE* dist/ArableInstruments/
+	cp plugin.* dist/ArableInstruments/
+	cp -R res dist/ArableInstruments/
+	cd dist && zip -5 -r ArableInstruments-$(VERSION)-$(ARCH).zip ArableInstruments

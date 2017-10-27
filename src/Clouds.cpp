@@ -213,7 +213,7 @@ void Clouds::step() {
 CloudsWidget::CloudsWidget() {
   Clouds *module = new Clouds();
   setModule(module);
-  box.size = Vec(15*18+67*3, 380);
+  box.size = Vec(15*18+67*3-6, 380);
 
   {
     Panel *panel = new LightPanel();
