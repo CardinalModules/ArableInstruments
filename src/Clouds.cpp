@@ -5,7 +5,7 @@
 #include "dsp/digital.hpp"
 #include "clouds/dsp/granular_processor.h"
 
-#define ALLOW_BUFFER_SIZE
+
 struct Clouds : Module {
   enum ParamIds {
     POSITION_PARAM,
@@ -402,12 +402,14 @@ Menu *CloudsWidget::createContextMenu() {
   menu->pushChild(construct<CloudsLofiItem>(&MenuEntry::text, "HIFI", &CloudsLofiItem::clouds, clouds, &CloudsLofiItem::setting, false));
   menu->pushChild(construct<CloudsLofiItem>(&MenuEntry::text, "LOFI", &CloudsLofiItem::clouds, clouds, &CloudsLofiItem::setting, true));  
   
+#ifdef BUFFERRESIZING
+// disable by default as it seems to make alternative modes unstable
   menu->pushChild(construct<MenuLabel>(&MenuEntry::text, "BUFFER SIZE (EXPERIMENTAL)"));
   menu->pushChild(construct<CloudsBufferItem>(&MenuEntry::text, "ORIGINAL", &CloudsBufferItem::clouds, clouds, &CloudsBufferItem::setting, 1));
   menu->pushChild(construct<CloudsBufferItem>(&MenuEntry::text, "2X", &CloudsBufferItem::clouds, clouds, &CloudsBufferItem::setting, 2));
   menu->pushChild(construct<CloudsBufferItem>(&MenuEntry::text, "4X", &CloudsBufferItem::clouds, clouds, &CloudsBufferItem::setting, 4));
   menu->pushChild(construct<CloudsBufferItem>(&MenuEntry::text, "8X", &CloudsBufferItem::clouds, clouds, &CloudsBufferItem::setting, 8));
-  
+#endif  
     
   return menu;
 }
