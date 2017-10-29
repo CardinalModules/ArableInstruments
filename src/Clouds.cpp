@@ -5,6 +5,7 @@
 #include "dsp/digital.hpp"
 #include "clouds/dsp/granular_processor.h"
 
+#define ALLOW_BUFFER_SIZE
 struct Clouds : Module {
   enum ParamIds {
     POSITION_PARAM,
@@ -52,6 +53,9 @@ struct Clouds : Module {
 
   clouds::PlaybackMode playbackmode =  clouds::PLAYBACK_MODE_GRANULAR;
   
+  
+  int buffersize = 1;
+  int currentbuffersize = 1;
   bool lofi = false;
   bool mono = false;
   uint8_t *block_mem;
@@ -80,6 +84,7 @@ struct Clouds : Module {
     json_object_set_new(rootJ, "lofi", json_integer(lofi));
     json_object_set_new(rootJ, "mono", json_integer(mono));
     json_object_set_new(rootJ, "freeze", json_integer(freeze));
+    json_object_set_new(rootJ, "buffersize", json_integer(buffersize));
 #ifdef PARASITES
     json_object_set_new(rootJ, "reverse", json_integer(reverse));
 #endif
@@ -102,7 +107,11 @@ struct Clouds : Module {
     json_t *freezeJ = json_object_get(rootJ, "freeze");
 		if (freezeJ) {
 			freeze = json_integer_value(freezeJ);
-		}    
+		}
+    json_t *buffersizeJ = json_object_get(rootJ, "buffersize");
+		if (buffersizeJ) {
+			buffersize = json_integer_value(buffersizeJ);
+		}      
 #ifdef PARASITES
     json_t *reverseJ = json_object_get(rootJ, "reverse");
 		if (reverseJ) {
@@ -166,6 +175,18 @@ void Clouds::step() {
         input[i].l = clampf(inputFrames[i].samples[0] * 32767.0, -32768, 32767);
         input[i].r = clampf(inputFrames[i].samples[1] * 32767.0, -32768, 32767);
       }
+    }
+    if(currentbuffersize != buffersize){
+      //re-init processor with new size
+      delete processor;
+      delete[] block_mem;
+      int memLen = 118784*buffersize;
+      const int ccmLen = 65536 - 128;
+      block_mem = new uint8_t[memLen]();
+      processor = new clouds::GranularProcessor();
+      memset(processor, 0, sizeof(*processor));
+      processor->Init(block_mem, memLen, block_ccm, ccmLen);
+      currentbuffersize = buffersize;
     }
 
     // Set up processor
@@ -343,6 +364,19 @@ struct CloudsLofiItem : MenuItem {
   }
 };
 
+
+struct CloudsBufferItem : MenuItem {
+  Clouds *clouds;
+  int setting;
+
+  void onAction() override {
+    clouds->buffersize = setting;
+  }
+  void step() override {
+    rightText = (clouds->buffersize == setting) ? "✔" : "";
+  }
+};
+
 Menu *CloudsWidget::createContextMenu() {
   Menu *menu = ModuleWidget::createContextMenu();
 
@@ -368,6 +402,13 @@ Menu *CloudsWidget::createContextMenu() {
   menu->pushChild(construct<CloudsLofiItem>(&MenuEntry::text, "HIFI", &CloudsLofiItem::clouds, clouds, &CloudsLofiItem::setting, false));
   menu->pushChild(construct<CloudsLofiItem>(&MenuEntry::text, "LOFI", &CloudsLofiItem::clouds, clouds, &CloudsLofiItem::setting, true));  
   
+  menu->pushChild(construct<MenuLabel>(&MenuEntry::text, "BUFFER SIZE (EXPERIMENTAL)"));
+  menu->pushChild(construct<CloudsBufferItem>(&MenuEntry::text, "ORIGINAL", &CloudsBufferItem::clouds, clouds, &CloudsBufferItem::setting, 1));
+  menu->pushChild(construct<CloudsBufferItem>(&MenuEntry::text, "2X", &CloudsBufferItem::clouds, clouds, &CloudsBufferItem::setting, 2));
+  menu->pushChild(construct<CloudsBufferItem>(&MenuEntry::text, "4X", &CloudsBufferItem::clouds, clouds, &CloudsBufferItem::setting, 4));
+  menu->pushChild(construct<CloudsBufferItem>(&MenuEntry::text, "8X", &CloudsBufferItem::clouds, clouds, &CloudsBufferItem::setting, 8));
+  
+    
   return menu;
 }
 
