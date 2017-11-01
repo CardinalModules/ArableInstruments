@@ -25,4 +25,5 @@ dist: all
 	cp LICENSE* dist/ArableInstruments/
 	cp plugin.* dist/ArableInstruments/
 	cp -R res dist/ArableInstruments/
+	rm -f dist/ArableInstruments/res/*.pdn
 	cd dist && zip -5 -r ArableInstruments-$(VERSION)-$(ARCH).zip ArableInstruments

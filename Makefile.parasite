@@ -26,4 +26,5 @@ dist: all
 	cp LICENSE* dist/ParableInstruments/
 	cp plugin.* dist/ParableInstruments/
 	cp -R res dist/ParableInstruments/
+	rm -f dist/ParableInstruments/res/*.pdn
 	cd dist && zip -5 -r ParableInstruments-$(VERSION)-$(ARCH).zip ParableInstruments
