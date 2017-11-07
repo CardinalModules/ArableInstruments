@@ -18,7 +18,13 @@ Parasites has many features and tweaks compared to the vanilla firmware, includi
 - New alternative modes (Oliverb reverb and Resonestor resonator)
 - Reverse option for some modes (implemented here as a dedicated button)
 
-
+IMPORTANT NOTE:
+This repository includes code for both the vanilla firmware (Joni) and Parasites firmware (Neil), but only builds one at a time as separate libraries. If you want to maintain both side by side in a development branch, you can have two clones of the repository under different names in the plugins folder.
+The parasites firmware is build using the makefile 'Makefile.parasite'.
+To build the parasites firmware, run 'make clean', and then build using the makefile Makefile.parasite:
+  make -f Makefile.parasite
+  make -f Makefile.parasite dist
+  
 # Building Instructions:
 After cloning the repo, do a submodule update with
   git submodule update --init --recursive
