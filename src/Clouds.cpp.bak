@@ -131,7 +131,7 @@ struct Clouds : Module {
 };
 
 
-Clouds::Clouds() : Module(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS) {
+Clouds::Clouds() : Module(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS) {
   const int memLen = 118784;
   const int ccmLen = 65536 - 128;
   block_mem = new uint8_t[memLen]();
@@ -231,13 +231,13 @@ void Clouds::step() {
        reverse = !reverse;
     } 
     p->granular.reverse = reverse;
-    lights[REVERSE_LIGHT].setBrightness(p->granular.reverse ? 1.0 : 0.0);
+    reverseLight = p->granular.reverse ? 1.0 : 0.0;
 #endif
 
     clouds::ShortFrame output[32];
     processor->Process(input, output, 32);
     
-    lights[FREEZE_LIGHT].setBrightness(p->freeze ? 1.0 : 0.0);
+    freezeLight = p->freeze ? 1.0 : 0.0;
 
     // Convert output buffer
     {
@@ -324,18 +324,18 @@ CloudsWidget::CloudsWidget() {
   addInput(createInput<PJ3410Port>(Vec(214+67*2, 291), module, Clouds::FEEDBACK_INPUT));
   addInput(createInput<PJ3410Port>(Vec(214+67*3, 291), module, Clouds::REVERB_INPUT));
   
-	struct FreezeLight : GreenLight {
+	struct FreezeLight : YellowLight {
 		FreezeLight() {
-			box.size = Vec(28-16, 28-16);
+			box.size = Vec(28-6, 28-6);
 			bgColor = COLOR_BLACK_TRANSPARENT;
 		}
 	};
 
   addParam(createParam<LEDButton>(Vec(68, 52-1), module, Clouds::FREEZE_PARAM, 0.0, 1.0, 0.0));
-  addChild(createLight<FreezeLight>(Vec(68+3, 52-1+3), module,Clouds::FREEZE_LIGHT));
+  addChild(createLight<FreezeLight>(Vec(68+5, 52+4), module,FREEZE_LIGHT);
 #ifdef PARASITES 
   addParam(createParam<LEDButton>(Vec(68-15, 52-1-25), module, Clouds::REVERSE_PARAM, 0.0, 1.0, 0.0));
-  addChild(createLight<FreezeLight>(Vec(68+3-15, 52-1+3-25), module, Clouds::REVERSE_LIGHT));
+  addChild(createLight<FreezeLight>(Vec(68+5-15, 52+4-25), module, REVERSE_LIGHT));
 #endif
   
   

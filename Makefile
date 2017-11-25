@@ -1,6 +1,7 @@
+VERSION ?= v0.5.0
 
 FLAGS += \
-	-fshort-enums -DTEST \
+	-DTEST \
 	-I./eurorack \
 	-Wno-unused-local-typedefs
 

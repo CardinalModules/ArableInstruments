@@ -1,8 +1,10 @@
 
+VERSION ?= v0.5.0
+
 FLAGS += \
-	-fshort-enums -DTEST -DPARASITES \
+	-DTEST -DPARASITES \
 	-I./parasites \
-	-Wno-unused-local-typedefs
+	-Wno-unused-local-typedefs 
 
 
 SOURCES = $(wildcard src/*.cpp) \
