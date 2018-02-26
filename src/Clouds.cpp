@@ -1,5 +1,5 @@
 #include <string.h>
-#include "AudibleInstruments.hpp"
+#include "ArableInstruments.hpp"
 #include "dsp/samplerate.hpp"
 #include "dsp/ringbuffer.hpp"
 #include "dsp/digital.hpp"
@@ -139,10 +139,10 @@ Clouds::Clouds() : Module(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS) {
   processor = new clouds::GranularProcessor();
   memset(processor, 0, sizeof(*processor));
 
-  freezeTrigger.setThresholds(0.0, 1.0);
-#ifdef PARASITES
-  reverseTrigger.setThresholds(0.0, 1.0);   
-#endif  
+//   freezeTrigger.setThresholds(0.0, 1.0);
+// #ifdef PARASITES
+//   reverseTrigger.setThresholds(0.0, 1.0);   
+// #endif  
   processor->Init(block_mem, memLen, block_ccm, ccmLen);
 }
 
@@ -171,7 +171,7 @@ void Clouds::step() {
     clouds::ShortFrame input[32] = {};
     // Convert input buffer
     {
-      inputSrc.setRatio(32000.0 / engineGetSampleRate());
+      inputSrc.setRates(32000, engineGetSampleRate());
       Frame<2> inputFrames[32];
       int inLen = inputBuffer.size();
       int outLen = 32;
@@ -247,7 +247,7 @@ void Clouds::step() {
         outputFrames[i].samples[1] = output[i].r / 32768.0;
       }
 
-      outputSrc.setRatio( engineGetSampleRate() / 32000.0);
+      outputSrc.setRates( engineGetSampleRate() , 32000);
       int inLen = 32;
       int outLen = outputBuffer.capacity();
       outputSrc.process(outputFrames, &inLen, outputBuffer.endData(), &outLen);
@@ -266,11 +266,13 @@ void Clouds::step() {
 }
 
 
+struct CloudsWidget : ModuleWidget {
+  CloudsWidget(Clouds *module);
+  Menu *createContextMenu() override;
+};
 
+CloudsWidget::CloudsWidget(Clouds *module) : ModuleWidget(module) {
 
-CloudsWidget::CloudsWidget() {
-  Clouds *module = new Clouds();
-  setModule(module);
   box.size = Vec(15*18+67*3-6, 380);
 
   {
@@ -379,7 +381,6 @@ struct CloudsLofiItem : MenuItem {
   }
 };
 
-
 struct CloudsBufferItem : MenuItem {
   Clouds *clouds;
   int setting;
@@ -399,31 +400,31 @@ Menu *CloudsWidget::createContextMenu() {
   assert(clouds);
 
 
-  menu->pushChild(construct<MenuLabel>());
-  menu->pushChild(construct<MenuLabel>(&MenuEntry::text, "MODE"));
-  menu->pushChild(construct<CloudsModeItem>(&MenuEntry::text, "GRANULAR", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_GRANULAR));
-  menu->pushChild(construct<CloudsModeItem>(&MenuEntry::text, "SPECTRAL", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_SPECTRAL));
-  menu->pushChild(construct<CloudsModeItem>(&MenuEntry::text, "LOOPING_DELAY", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_LOOPING_DELAY));
-  menu->pushChild(construct<CloudsModeItem>(&MenuEntry::text, "STRETCH", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_STRETCH));
+  menu->pushChild(construct<MenuEntry>());
+  menu->pushChild(construct<MenuLabel>(&MenuLabel::text, "MODE"));
+  menu->pushChild(construct<CloudsModeItem>(&CloudsModeItem::text, "GRANULAR", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_GRANULAR));
+  menu->pushChild(construct<CloudsModeItem>(&CloudsModeItem::text, "SPECTRAL", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_SPECTRAL));
+  menu->pushChild(construct<CloudsModeItem>(&CloudsModeItem::text, "LOOPING_DELAY", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_LOOPING_DELAY));
+  menu->pushChild(construct<CloudsModeItem>(&CloudsModeItem::text, "STRETCH", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_STRETCH));
 #ifdef PARASITES  
-  menu->pushChild(construct<CloudsModeItem>(&MenuEntry::text, "OLIVERB", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_OLIVERB));
-  menu->pushChild(construct<CloudsModeItem>(&MenuEntry::text, "RESONESTOR", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_RESONESTOR));
+  menu->pushChild(construct<CloudsModeItem>(&CloudsModeItem::text, "OLIVERB", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_OLIVERB));
+  menu->pushChild(construct<CloudsModeItem>(&CloudsModeItem::text, "RESONESTOR", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_RESONESTOR));
 #endif     
-  menu->pushChild(construct<MenuLabel>(&MenuEntry::text, "STEREO/MONO"));
-  menu->pushChild(construct<CloudsMonoItem>(&MenuEntry::text, "STEREO", &CloudsMonoItem::clouds, clouds, &CloudsMonoItem::setting, false));
-  menu->pushChild(construct<CloudsMonoItem>(&MenuEntry::text, "MONO", &CloudsMonoItem::clouds, clouds, &CloudsMonoItem::setting, true));  
+  menu->pushChild(construct<MenuLabel>(&MenuLabel::text, "STEREO/MONO"));
+  menu->pushChild(construct<CloudsMonoItem>(&CloudsMonoItem::text, "STEREO", &CloudsMonoItem::clouds, clouds, &CloudsMonoItem::setting, false));
+  menu->pushChild(construct<CloudsMonoItem>(&CloudsMonoItem::text, "MONO", &CloudsMonoItem::clouds, clouds, &CloudsMonoItem::setting, true));  
   
-  menu->pushChild(construct<MenuLabel>(&MenuEntry::text, "HIFI/LOFI"));
-  menu->pushChild(construct<CloudsLofiItem>(&MenuEntry::text, "HIFI", &CloudsLofiItem::clouds, clouds, &CloudsLofiItem::setting, false));
-  menu->pushChild(construct<CloudsLofiItem>(&MenuEntry::text, "LOFI", &CloudsLofiItem::clouds, clouds, &CloudsLofiItem::setting, true));  
+  menu->pushChild(construct<MenuLabel>(&MenuLabel::text, "HIFI/LOFI"));
+  menu->pushChild(construct<CloudsLofiItem>(&CloudsLofiItem::text, "HIFI", &CloudsLofiItem::clouds, clouds, &CloudsLofiItem::setting, false));
+  menu->pushChild(construct<CloudsLofiItem>(&CloudsLofiItem::text, "LOFI", &CloudsLofiItem::clouds, clouds, &CloudsLofiItem::setting, true));  
   
 #ifdef BUFFERRESIZING
 // disable by default as it seems to make alternative modes unstable
-  menu->pushChild(construct<MenuLabel>(&MenuEntry::text, "BUFFER SIZE (EXPERIMENTAL)"));
-  menu->pushChild(construct<CloudsBufferItem>(&MenuEntry::text, "ORIGINAL", &CloudsBufferItem::clouds, clouds, &CloudsBufferItem::setting, 1));
-  menu->pushChild(construct<CloudsBufferItem>(&MenuEntry::text, "2X", &CloudsBufferItem::clouds, clouds, &CloudsBufferItem::setting, 2));
-  menu->pushChild(construct<CloudsBufferItem>(&MenuEntry::text, "4X", &CloudsBufferItem::clouds, clouds, &CloudsBufferItem::setting, 4));
-  menu->pushChild(construct<CloudsBufferItem>(&MenuEntry::text, "8X", &CloudsBufferItem::clouds, clouds, &CloudsBufferItem::setting, 8));
+  menu->pushChild(construct<MenuLabel>(&MenuLabel::text, "BUFFER SIZE (EXPERIMENTAL)"));
+  menu->pushChild(construct<CloudsBufferItem>(&CloudsBufferItem::text, "ORIGINAL", &CloudsBufferItem::clouds, clouds, &CloudsBufferItem::setting, 1));
+  menu->pushChild(construct<CloudsBufferItem>(&CloudsBufferItem::text, "2X", &CloudsBufferItem::clouds, clouds, &CloudsBufferItem::setting, 2));
+  menu->pushChild(construct<CloudsBufferItem>(&CloudsBufferItem::text, "4X", &CloudsBufferItem::clouds, clouds, &CloudsBufferItem::setting, 4));
+  menu->pushChild(construct<CloudsBufferItem>(&CloudsBufferItem::text, "8X", &CloudsBufferItem::clouds, clouds, &CloudsBufferItem::setting, 8));
 #endif  
     
   return menu;
@@ -431,3 +432,10 @@ Menu *CloudsWidget::createContextMenu() {
 
 
 
+Model *modelClouds = Model::create<Clouds, CloudsWidget>(
+
+#ifdef PARASITES
+  "Arable Instruments", "Neil", "Neil - Texture Synthesizer",GRANULAR_TAG, REVERB_TAG);
+#else
+  "Arable Instruments", "Joni", "Joni - Texture Synthesizer",GRANULAR_TAG, REVERB_TAG);  
+#endif

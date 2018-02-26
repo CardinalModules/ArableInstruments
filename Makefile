@@ -1,10 +1,5 @@
-VERSION ?= v0.5.0
-
-FLAGS += \
-	-DTEST \
-	-I./eurorack \
-	-Wno-unused-local-typedefs
-
+SLUG = ArableInstruments
+VERSION = 0.6.0dev
 
 SOURCES = $(wildcard src/*.cpp) \
 	eurorack/stmlib/utils/random.cc \
@@ -16,15 +11,17 @@ SOURCES = $(wildcard src/*.cpp) \
 	eurorack/clouds/dsp/pvoc/frame_transformation.cc \
 	eurorack/clouds/dsp/pvoc/phase_vocoder.cc \
 	eurorack/clouds/dsp/pvoc/stft.cc \
-	eurorack/clouds/resources.cc 
-
-include ../../plugin.mk
+	eurorack/clouds/resources.cc \
 
 
-dist: all
-	mkdir -p dist/ArableInstruments
-	cp LICENSE* dist/ArableInstruments/
-	cp plugin.* dist/ArableInstruments/
-	cp -R res dist/ArableInstruments/
-	rm -f dist/ArableInstruments/res/*.pdn
-	cd dist && zip -5 -r ArableInstruments-$(VERSION)-$(ARCH).zip ArableInstruments
+FLAGS += \
+	-DTEST \
+	-I./eurorack \
+	-Wno-unused-local-typedefs
+
+DISTRIBUTABLES += $(wildcard LICENSE*) res
+
+RACK_DIR ?= ../..
+
+include $(RACK_DIR)/plugin.mk
+
