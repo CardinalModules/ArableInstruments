@@ -1,11 +1,5 @@
-
-VERSION ?= v0.5.0
-
-FLAGS += \
-	-DTEST -DPARASITES \
-	-I./parasites \
-	-Wno-unused-local-typedefs 
-
+SLUG = ParableInstruments
+VERSION = 0.6.0dev
 
 SOURCES = $(wildcard src/*.cpp) \
 	parasites/stmlib/utils/random.cc \
@@ -19,14 +13,15 @@ SOURCES = $(wildcard src/*.cpp) \
 	parasites/clouds/dsp/pvoc/stft.cc \
 	parasites/clouds/resources.cc 
 
+FLAGS += \
+	-DTEST \
+	-DPARASITES \
+	-I./parasites \
+	-Wno-unused-local-typedefs
 
-include ../../plugin.mk
+DISTRIBUTABLES += $(wildcard LICENSE*) res
 
+RACK_DIR ?= ../..
 
-dist: all
-	mkdir -p dist/ParableInstruments
-	cp LICENSE* dist/ParableInstruments/
-	cp plugin.* dist/ParableInstruments/
-	cp -R res dist/ParableInstruments/
-	rm -f dist/ParableInstruments/res/*.pdn
-	cd dist && zip -5 -r ParableInstruments-$(VERSION)-$(ARCH).zip ParableInstruments
+include $(RACK_DIR)/plugin.mk
+
