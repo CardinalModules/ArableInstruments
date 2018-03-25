@@ -1,5 +1,5 @@
 SLUG = ArableInstruments
-VERSION = 0.6.0dev
+VERSION = 0.6.0
 
 SOURCES = $(wildcard src/*.cpp) \
 	eurorack/stmlib/utils/random.cc \
