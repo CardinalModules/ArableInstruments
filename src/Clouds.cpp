@@ -83,11 +83,10 @@ struct Clouds : Module {
 
 	json_t *dataToJson() override {
 		json_t *rootJ = json_object();
-    //playbackmode, lofi, mono
-		json_object_set_new(rootJ, "playbackmode", json_integer(playbackmode));
-    json_object_set_new(rootJ, "lofi", json_integer(lofi));
-    json_object_set_new(rootJ, "mono", json_integer(mono));
-    json_object_set_new(rootJ, "freeze", json_integer(freeze));
+    json_object_set_new(rootJ, "playbackmode", json_integer(playbackmode));
+    json_object_set_new(rootJ, "lofi", json_boolean(lofi));
+    json_object_set_new(rootJ, "mono", json_boolean(mono));
+    json_object_set_new(rootJ, "freeze", json_boolean(freeze));
     json_object_set_new(rootJ, "buffersize", json_integer(buffersize));
 #ifdef PARASITES
     json_object_set_new(rootJ, "reverse", json_integer(reverse));
@@ -102,15 +101,15 @@ struct Clouds : Module {
 		}
     json_t *lofiJ = json_object_get(rootJ, "lofi");
 		if (lofiJ) {
-			lofi = json_integer_value(lofiJ);
+			lofi = json_boolean_value(lofiJ);
 		}
     json_t *monoJ = json_object_get(rootJ, "mono");
 		if (monoJ) {
-			mono = json_integer_value(monoJ);
+			mono = json_boolean_value(monoJ);
 		}
     json_t *freezeJ = json_object_get(rootJ, "freeze");
 		if (freezeJ) {
-			freeze = json_integer_value(freezeJ);
+			freeze = json_boolean_value(freezeJ);
 		}
     json_t *buffersizeJ = json_object_get(rootJ, "buffersize");
 		if (buffersizeJ) {
@@ -277,51 +276,20 @@ void Clouds::process(const ProcessArgs &args) {
   }
 }
 
-struct FreezeLight : GreenLight {
-  FreezeLight() {
-    box.size = Vec(28-16, 28-16);
-    bgColor = componentlibrary::SCHEME_LIGHT_GRAY;
-  }
+
+template <typename TBase = GrayModuleLightWidget>
+struct TGrayLight : TBase {
+	TGrayLight() {
+		this->box.size = mm2px(math::Vec(4, 4));
+		this->addBaseColor(SCHEME_LIGHT_GRAY);
+	}
 };
 
-struct CloudsModeItem : MenuItem {
-  Clouds *clouds;
-  clouds::PlaybackMode mode;
-
-  void onAction(const event::Action &e) override {
-    clouds->playbackmode = mode;
-  }
-  void step() override {
-    rightText = (clouds->playbackmode == mode) ? "✔" : "";
-  }
-};
+using GrayLight = TGrayLight<>;
+struct FreezeLight : GrayLight {};
 
 
-struct CloudsMonoItem : MenuItem {
-  Clouds *clouds;
-  bool setting;
-
-  void onAction(const event::Action &e) override {
-    clouds->mono = setting;
-  }
-  void step() override {
-    rightText = (clouds->mono == setting) ? "✔" : "";
-  }
-};
-
-
-struct CloudsLofiItem : MenuItem {
-  Clouds *clouds;
-  bool setting;
-
-  void onAction(const event::Action &e) override {
-    clouds->lofi = setting;
-  }
-  void step() override {
-    rightText = (clouds->lofi == setting) ? "✔" : "";
-  }
-};
-
+#ifdef BUFFERRESIZING
 struct CloudsBufferItem : MenuItem {
   Clouds *clouds;
   int setting;
@@ -333,25 +301,27 @@ struct CloudsBufferItem : MenuItem {
     rightText = (clouds->buffersize == setting) ? "✔" : "";
   }
 };
+#endif
 
-// Ported from Rack 0.6
 struct CustomPanel : TransparentWidget {
-	NVGcolor backgroundColor;
-	std::shared_ptr<Image> backgroundImage;
-	void draw(const DrawArgs &args) override;
+	NVGcolor backgroundColor = componentlibrary::SCHEME_LIGHT_GRAY;
+  std::string imagePath;
+
+  void draw(const DrawArgs &args) override;
 };
 
 void CustomPanel::draw(const DrawArgs &args) {
-	nvgBeginPath(args.vg);
+
+  std::shared_ptr<Image> backgroundImage = APP->window->loadImage(imagePath);
+
+  nvgBeginPath(args.vg);
 	nvgRect(args.vg, 0.0, 0.0, box.size.x, box.size.y);
 
-	// Background color
 	if (backgroundColor.a > 0) {
 		nvgFillColor(args.vg, backgroundColor);
 		nvgFill(args.vg);
 	}
 
-	// Background image
 	if (backgroundImage) {
 		int width, height;
 		nvgImageSize(args.vg, backgroundImage->handle, &width, &height);
@@ -360,40 +330,42 @@ void CustomPanel::draw(const DrawArgs &args) {
 		nvgFill(args.vg);
 	}
 
-	// Border
-	NVGcolor borderColor = nvgRGBAf(0.5, 0.5, 0.5, 0.5);
-	nvgBeginPath(args.vg);
-	nvgRect(args.vg, 0.5, 0.5, box.size.x - 1.0, box.size.y - 1.0);
-	nvgStrokeColor(args.vg, borderColor);
-	nvgStrokeWidth(args.vg, 1.0);
-	nvgStroke(args.vg);
-
 	Widget::draw(args);
 }
-
-struct CustomLightPanel : CustomPanel {
-	CustomLightPanel() {
-		backgroundColor = componentlibrary::SCHEME_LIGHT_GRAY;
-	}
-};
 
 struct CloudsWidget : ModuleWidget {
   CloudsWidget(Clouds *module) {
 		setModule(module);
 
-    box.size = Vec(15*18+67*3-6, 380);
+    box.size = Vec(465, 380);
 
     {
-      CustomPanel *panel = new CustomLightPanel();
+      CustomPanel *panel = new CustomPanel();
 #ifdef PARASITES
-      panel->backgroundImage = APP->window->loadImage(asset::plugin(pluginInstance, "res/Neil.png"));
+      panel->imagePath = asset::plugin(pluginInstance, "res/Neil.png");
 #else
-      panel->backgroundImage = APP->window->loadImage(asset::plugin(pluginInstance, "res/Joni.png"));
+      panel->imagePath = asset::plugin(pluginInstance, "res/Joni.png");
 #endif
 
       panel->box.size = box.size;
       addChild(panel);
     }
+
+#ifdef PARASITES
+    const std::string svgPath = asset::plugin(pluginInstance, "res/Neil.svg");
+#else
+    const std::string svgPath = asset::plugin(pluginInstance, "res/Joni.svg");
+#endif
+    FramebufferWidget* fb = new FramebufferWidget();
+    SvgWidget* labels = new SvgWidget();
+    labels->setSvg(Svg::load(svgPath));
+    fb->addChild(labels);
+    addChild(fb);
+
+    addChild(createWidget<ScrewSilver>(Vec(15, 0)));
+		addChild(createWidget<ScrewSilver>(Vec(435, 0)));
+		addChild(createWidget<ScrewSilver>(Vec(15, 365)));
+		addChild(createWidget<ScrewSilver>(Vec(435, 365)));
 
     // TODO
     // addParam(createParam<MediumMomentarySwitch>(Vec(211, 51), module, Clouds::POSITION_PARAM));
@@ -442,24 +414,55 @@ struct CloudsWidget : ModuleWidget {
 
   void appendContextMenu(Menu *menu) override {
     Clouds *clouds = dynamic_cast<Clouds*>(this->module);
+    assert(module);
 
-    menu->addChild(construct<MenuEntry>());
-    menu->addChild(construct<MenuLabel>(&MenuLabel::text, "MODE"));
-    menu->addChild(construct<CloudsModeItem>(&CloudsModeItem::text, "GRANULAR", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_GRANULAR));
-    menu->addChild(construct<CloudsModeItem>(&CloudsModeItem::text, "SPECTRAL", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_SPECTRAL));
-    menu->addChild(construct<CloudsModeItem>(&CloudsModeItem::text, "LOOPING_DELAY", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_LOOPING_DELAY));
-    menu->addChild(construct<CloudsModeItem>(&CloudsModeItem::text, "STRETCH", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_STRETCH));
+    menu->addChild(new MenuSeparator);
+		menu->addChild(createMenuLabel("Mode"));
+
+    static const std::vector<std::string> modeLabels = {
+			"Granular",
+			"Spectral",
+			"Looping Delay",
+			"Stretch",
 #ifdef PARASITES
-    menu->addChild(construct<CloudsModeItem>(&CloudsModeItem::text, "OLIVERB", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_OLIVERB));
-    menu->addChild(construct<CloudsModeItem>(&CloudsModeItem::text, "RESONESTOR", &CloudsModeItem::clouds, clouds, &CloudsModeItem::mode, clouds::PLAYBACK_MODE_RESONESTOR));
+      "Oliverb",
+      "Resonestor"
 #endif
-    menu->addChild(construct<MenuLabel>(&MenuLabel::text, "STEREO/MONO"));
-    menu->addChild(construct<CloudsMonoItem>(&CloudsMonoItem::text, "STEREO", &CloudsMonoItem::clouds, clouds, &CloudsMonoItem::setting, false));
-    menu->addChild(construct<CloudsMonoItem>(&CloudsMonoItem::text, "MONO", &CloudsMonoItem::clouds, clouds, &CloudsMonoItem::setting, true));
+		};
+		for (int i = 0; i < (int) modeLabels.size(); i++) {
+			menu->addChild(createCheckMenuItem(modeLabels[i], "",
+				[=]() {return clouds->playbackmode == i;},
+				[=]() {clouds->playbackmode = (clouds::PlaybackMode)i;}
+			));
+		}
 
-    menu->addChild(construct<MenuLabel>(&MenuLabel::text, "HIFI/LOFI"));
-    menu->addChild(construct<CloudsLofiItem>(&CloudsLofiItem::text, "HIFI", &CloudsLofiItem::clouds, clouds, &CloudsLofiItem::setting, false));
-    menu->addChild(construct<CloudsLofiItem>(&CloudsLofiItem::text, "LOFI", &CloudsLofiItem::clouds, clouds, &CloudsLofiItem::setting, true));
+    menu->addChild(new MenuSeparator);
+		menu->addChild(createMenuLabel("Mono/Stereo"));
+
+    static const std::vector<std::string> monoLabels = {
+			"Stereo",
+			"Mono"
+		};
+		for (int i = 0; i < (int) monoLabels.size(); i++) {
+			menu->addChild(createCheckMenuItem(monoLabels[i], "",
+				[=]() {return clouds->mono == (monoLabels[i] == "Mono");},
+				[=]() {clouds->mono = (monoLabels[i] == "Mono");}
+			));
+		}
+
+    menu->addChild(new MenuSeparator);
+		menu->addChild(createMenuLabel("HiFi/LoFi"));
+
+    static const std::vector<std::string> fidelityLabels = {
+			"HiFi",
+			"LoFi"
+		};
+		for (int i = 0; i < (int) fidelityLabels.size(); i++) {
+			menu->addChild(createCheckMenuItem(fidelityLabels[i], "",
+				[=]() {return clouds->lofi == (fidelityLabels[i] == "LoFi");},
+				[=]() {clouds->lofi = (fidelityLabels[i] == "LoFi");}
+			));
+		}
 
 #ifdef BUFFERRESIZING
     // disable by default as it seems to make alternative modes unstable
