@@ -304,7 +304,11 @@ struct CloudsBufferItem : MenuItem {
 #endif
 
 struct CustomPanel : TransparentWidget {
-	NVGcolor backgroundColor = componentlibrary::SCHEME_LIGHT_GRAY;
+#ifdef PARASITES
+  NVGcolor backgroundColor = nvgRGB(0x30, 0x25, 0x25);
+#else
+  NVGcolor backgroundColor = nvgRGB(0x19, 0x19, 0x19);
+#endif
   std::string imagePath;
 
   void draw(const DrawArgs &args) override;
@@ -330,42 +334,34 @@ void CustomPanel::draw(const DrawArgs &args) {
 		nvgFill(args.vg);
 	}
 
-	Widget::draw(args);
+	TransparentWidget::draw(args);
 }
 
 struct CloudsWidget : ModuleWidget {
+  CustomPanel *panel;
+
   CloudsWidget(Clouds *module) {
-		setModule(module);
-
-    box.size = Vec(465, 380);
-
-    {
-      CustomPanel *panel = new CustomPanel();
-#ifdef PARASITES
-      panel->imagePath = asset::plugin(pluginInstance, "res/Neil.png");
-#else
-      panel->imagePath = asset::plugin(pluginInstance, "res/Joni.png");
-#endif
-
-      panel->box.size = box.size;
-      addChild(panel);
-    }
+    setModule(module);
 
 #ifdef PARASITES
     const std::string svgPath = asset::plugin(pluginInstance, "res/Neil.svg");
 #else
     const std::string svgPath = asset::plugin(pluginInstance, "res/Joni.svg");
 #endif
-    FramebufferWidget* fb = new FramebufferWidget();
-    SvgWidget* labels = new SvgWidget();
-    labels->setSvg(Svg::load(svgPath));
-    fb->addChild(labels);
-    addChild(fb);
+    setPanel(APP->window->loadSvg(svgPath));
+
+    panel = new CustomPanel();
+#ifdef PARASITES
+    panel->imagePath = asset::plugin(pluginInstance, "res/Neil.png");
+#else
+    panel->imagePath = asset::plugin(pluginInstance, "res/Joni.png");
+#endif
+    panel->box.size = box.size;
 
     addChild(createWidget<ScrewSilver>(Vec(15, 0)));
-		addChild(createWidget<ScrewSilver>(Vec(435, 0)));
-		addChild(createWidget<ScrewSilver>(Vec(15, 365)));
-		addChild(createWidget<ScrewSilver>(Vec(435, 365)));
+    addChild(createWidget<ScrewSilver>(Vec(435, 0)));
+    addChild(createWidget<ScrewSilver>(Vec(15, 365)));
+    addChild(createWidget<ScrewSilver>(Vec(435, 365)));
 
     // TODO
     // addParam(createParam<MediumMomentarySwitch>(Vec(211, 51), module, Clouds::POSITION_PARAM));
@@ -411,6 +407,11 @@ struct CloudsWidget : ModuleWidget {
 #endif
 
   };
+
+  void draw(const DrawArgs &args) override {
+      panel->draw(args);
+      ModuleWidget::draw(args);
+  }
 
   void appendContextMenu(Menu *menu) override {
     Clouds *clouds = dynamic_cast<Clouds*>(this->module);

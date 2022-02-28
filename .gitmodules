@@ -1,6 +1,6 @@
 [submodule "eurorack"]
 	path = eurorack
-	url = https://github.com/AndrewBelt/eurorack.git
+	url = https://github.com/CardinalModules/eurorack.git
 [submodule "avrlib"]
 	path = parasites/avrlib
 	url = https://github.com/pichenettes/avril.git
