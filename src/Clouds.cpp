@@ -408,6 +408,10 @@ struct CloudsWidget : ModuleWidget {
 
   };
 
+  ~CloudsWidget() override {
+    delete panel;
+  }
+
   void draw(const DrawArgs &args) override {
       panel->draw(args);
       ModuleWidget::draw(args);
