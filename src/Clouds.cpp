@@ -358,10 +358,10 @@ struct CloudsWidget : ModuleWidget {
 #endif
     panel->box.size = box.size;
 
-    addChild(createWidget<ScrewSilver>(Vec(15, 0)));
-    addChild(createWidget<ScrewSilver>(Vec(435, 0)));
-    addChild(createWidget<ScrewSilver>(Vec(15, 365)));
-    addChild(createWidget<ScrewSilver>(Vec(435, 365)));
+    addChild(createWidget<ScrewBlack>(Vec(15, 0)));
+    addChild(createWidget<ScrewBlack>(Vec(435, 0)));
+    addChild(createWidget<ScrewBlack>(Vec(15, 365)));
+    addChild(createWidget<ScrewBlack>(Vec(435, 365)));
 
     // TODO
     // addParam(createParam<MediumMomentarySwitch>(Vec(211, 51), module, Clouds::POSITION_PARAM));
